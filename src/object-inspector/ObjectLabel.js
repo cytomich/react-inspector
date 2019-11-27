@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { isArrayChunk } from '../utils/arrayChunk';
 import ObjectName from '../object/ObjectName';
 import ObjectValue from '../object/ObjectValue';
 import ObjectPreview from './ObjectPreview';
@@ -17,7 +18,7 @@ const ObjectLabel = ({ name, data, isNonenumerable = false }) => {
       ) : (
         <ObjectPreview data={name} />
       )}
-      <span>: </span>
+      {!isArrayChunk(object) && <span>: </span>}
       <ObjectValue object={object} />
     </span>
   );

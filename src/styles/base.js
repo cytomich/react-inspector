@@ -38,6 +38,10 @@ export default theme => ({
     },
   },
 
+  ObjectInspector: {
+    arrayChunkSize: theme.ARRAY_CHUNK_SIZE,
+  },
+
   ObjectPreview: {
     objectDescription: {
       fontStyle: 'italic',
@@ -94,7 +98,7 @@ export default theme => ({
       padding: 0,
       margin: 0,
       listStyleType: 'none',
-    }
+    },
   },
 
   TreeNode: {

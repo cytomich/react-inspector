@@ -6,10 +6,11 @@ import ObjectRootLabel from './ObjectRootLabel';
 import ObjectLabel from './ObjectLabel';
 
 import { propertyIsEnumerable } from '../utils/objectPrototype';
+import { createArrayChunk, isArrayChunk } from '../utils/arrayChunk';
 
-import { themeAcceptor } from '../styles';
+import { themeAcceptor, useStyles } from '../styles';
 
-const createIterator = (showNonenumerable, sortObjectKeys) => {
+const createIterator = (showNonenumerable, sortObjectKeys, arrayChunkSize) => {
   const objectIterator = function*(data) {
     const shouldIterate =
       (typeof data === 'object' && data !== null) || typeof data === 'function';
@@ -44,37 +45,61 @@ const createIterator = (showNonenumerable, sortObjectKeys) => {
         keys.sort(sortObjectKeys);
       }
 
-      for (let propertyName of keys) {
-        if (propertyIsEnumerable.call(data, propertyName)) {
-          const propertyValue = data[propertyName];
-          yield {
-            name: propertyName || `""`,
-            data: propertyValue,
-          };
-        } else if (showNonenumerable) {
-          // To work around the error (happens some time when propertyName === 'caller' || propertyName === 'arguments')
-          // 'caller' and 'arguments' are restricted function properties and cannot be accessed in this context
-          // http://stackoverflow.com/questions/31921189/caller-and-arguments-are-restricted-function-properties-and-cannot-be-access
-          let propertyValue;
-          try {
-            propertyValue = data[propertyName];
-          } catch (e) {
-            // console.warn(e)
-          }
+      const length = data.length;
 
-          if (propertyValue !== undefined) {
+      if (dataIsArray && length > arrayChunkSize) {
+        const indexes = keys.filter(k => !isNaN(Number(k)));
+        for (let i = 0; i < length; i += arrayChunkSize) {
+          const chunk = indexes.slice(i, i + arrayChunkSize);
+          yield {
+            name: `[${chunk[0]} … ${chunk[chunk.length - 1]}]`,
+            data: createArrayChunk(data, chunk),
+          };
+        }
+        if (showNonenumerable) {
+          yield {
+            name: 'length',
+            data: length,
+            isNonenumerable: true,
+          };
+        }
+      } else {
+        for (let propertyName of keys) {
+          if (propertyIsEnumerable.call(data, propertyName)) {
+            const propertyValue = data[propertyName];
             yield {
-              name: propertyName,
+              name: propertyName || `""`,
               data: propertyValue,
-              isNonenumerable: true,
             };
+          } else if (showNonenumerable) {
+            // To work around the error (happens some time when propertyName === 'caller' || propertyName === 'arguments')
+            // 'caller' and 'arguments' are restricted function properties and cannot be accessed in this context
+            // http://stackoverflow.com/questions/31921189/caller-and-arguments-are-restricted-function-properties-and-cannot-be-access
+            let propertyValue;
+            try {
+              propertyValue = data[propertyName];
+            } catch (e) {
+              // console.warn(e)
+            }
+
+            if (propertyValue !== undefined) {
+              yield {
+                name: propertyName,
+                data: propertyValue,
+                isNonenumerable: true,
+              };
+            }
           }
         }
       }
 
       // [[Prototype]] of the object: `Object.getPrototypeOf(data)`
       // the property name is shown as "__proto__"
-      if (showNonenumerable && data !== Object.prototype /* already added */) {
+      if (
+        showNonenumerable &&
+        data !== Object.prototype /* already added */ &&
+        !isArrayChunk(data)
+      ) {
         yield {
           name: '__proto__',
           data: Object.getPrototypeOf(data),
@@ -103,7 +128,12 @@ const ObjectInspector = ({
   nodeRenderer,
   ...treeViewProps
 }) => {
-  const dataIterator = createIterator(showNonenumerable, sortObjectKeys);
+  const styles = useStyles('ObjectInspector');
+  const dataIterator = createIterator(
+    showNonenumerable,
+    sortObjectKeys,
+    styles.arrayChunkSize
+  );
   const renderer = nodeRenderer ? nodeRenderer : defaultNodeRenderer;
 
   return (

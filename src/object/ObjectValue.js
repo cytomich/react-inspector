@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import { useStyles } from '../styles';
+import { isArrayChunk } from '../utils/arrayChunk';
 
 /**
  * A short description of the object values.
@@ -15,7 +16,9 @@ const ObjectValue = ({ object, styles }) => {
 
   switch (typeof object) {
     case 'bigint':
-      return <span style={mkStyle('objectValueNumber')}>{String(object)}n</span>;
+      return (
+        <span style={mkStyle('objectValueNumber')}>{String(object)}n</span>
+      );
     case 'number':
       return <span style={mkStyle('objectValueNumber')}>{String(object)}</span>;
     case 'string':
@@ -50,7 +53,9 @@ const ObjectValue = ({ object, styles }) => {
       ) {
         return <span>{`Buffer[${object.length}]`}</span>;
       }
-
+      if (isArrayChunk(object)) {
+        return null;
+      }
       return <span>{object.constructor.name}</span>;
     case 'function':
       return (
